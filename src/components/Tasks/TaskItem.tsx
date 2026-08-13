@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { TaskNode, TaskStatus } from '../../lib/types'
 import { progressOf } from '../../lib/tree'
 import { StatusBadge } from './StatusBadge'
+import { PriorityBadge } from './PriorityBadge'
 import { QuickAddForm } from './QuickAddForm'
 
 function isOverdue(dueDate: string | null, status: TaskStatus) {
@@ -75,6 +76,7 @@ export function TaskItem({
                 期限: {node.due_date}
               </span>
             )}
+            <PriorityBadge priority={node.priority} />
           </div>
         </button>
 

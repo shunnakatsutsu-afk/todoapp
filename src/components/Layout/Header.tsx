@@ -1,10 +1,10 @@
 import { supabase } from '../../lib/supabase'
 
-export type ViewTab = 'list' | 'calendar' | 'archive'
+export type ViewTab = 'list' | 'wbs' | 'archive'
 
 const TABS: { key: ViewTab; label: string }[] = [
   { key: 'list', label: 'リスト' },
-  { key: 'calendar', label: 'カレンダー' },
+  { key: 'wbs', label: 'WBS' },
   { key: 'archive', label: '完了履歴' },
 ]
 

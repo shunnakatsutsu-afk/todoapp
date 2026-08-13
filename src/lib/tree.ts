@@ -23,6 +23,11 @@ export function getDescendantIds(tasks: Task[], id: string): string[] {
   return children.flatMap((c) => [c.id, ...getDescendantIds(tasks, c.id)])
 }
 
+/** ツリーを深さ優先でフラット化する(WBS表示などで行として並べるために使う) */
+export function flattenTree(nodes: TaskNode[], depth = 0): { node: TaskNode; depth: number }[] {
+  return nodes.flatMap((n) => [{ node: n, depth }, ...flattenTree(n.children, depth + 1)])
+}
+
 /** 子タスクの完了割合を計算する */
 export function progressOf(node: TaskNode): { done: number; total: number } {
   if (node.children.length === 0) {

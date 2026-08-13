@@ -8,29 +8,34 @@ export function useTasks(userId: string | undefined) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchTasks = useCallback(async () => {
-    if (!userId) return
-    setLoading(true)
-    const { data, error: fetchError } = await supabase
-      .from('tasks')
-      .select('*')
-      .order('sort_order', { ascending: true })
-      .order('created_at', { ascending: true })
+  const fetchTasks = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      if (!userId) return
+      if (!opts?.silent) setLoading(true)
+      const { data, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: true })
 
-    if (fetchError) {
-      setError(fetchError.message)
-    } else {
-      setTasks((data ?? []) as Task[])
-      setError(null)
-    }
-    setLoading(false)
-  }, [userId])
+      if (fetchError) {
+        setError(fetchError.message)
+      } else {
+        setTasks((data ?? []) as Task[])
+        setError(null)
+      }
+      if (!opts?.silent) setLoading(false)
+    },
+    [userId],
+  )
 
   useEffect(() => {
     fetchTasks()
   }, [fetchTasks])
 
   // 別デバイスでの変更も反映されるようにリアルタイム購読する
+  // (Supabase側でReplicationが有効な場合のみ動作。無効でも下記の各操作後の再取得で
+  // 同一デバイスでは即時反映される)
   useEffect(() => {
     if (!userId) return
     const channel = supabase
@@ -39,7 +44,7 @@ export function useTasks(userId: string | undefined) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks', filter: `user_id=eq.${userId}` },
         () => {
-          fetchTasks()
+          fetchTasks({ silent: true })
         },
       )
       .subscribe()
@@ -55,20 +60,38 @@ export function useTasks(userId: string | undefined) {
       const { error: insertError } = await supabase
         .from('tasks')
         .insert({ ...task, user_id: userId })
-      if (insertError) setError(insertError.message)
+      if (insertError) {
+        setError(insertError.message)
+      } else {
+        await fetchTasks({ silent: true })
+      }
     },
-    [userId],
+    [userId, fetchTasks],
   )
 
-  const updateTask = useCallback(async (id: string, update: TaskUpdate) => {
-    const { error: updateError } = await supabase.from('tasks').update(update).eq('id', id)
-    if (updateError) setError(updateError.message)
-  }, [])
+  const updateTask = useCallback(
+    async (id: string, update: TaskUpdate) => {
+      const { error: updateError } = await supabase.from('tasks').update(update).eq('id', id)
+      if (updateError) {
+        setError(updateError.message)
+      } else {
+        await fetchTasks({ silent: true })
+      }
+    },
+    [fetchTasks],
+  )
 
-  const deleteTask = useCallback(async (id: string) => {
-    const { error: deleteError } = await supabase.from('tasks').delete().eq('id', id)
-    if (deleteError) setError(deleteError.message)
-  }, [])
+  const deleteTask = useCallback(
+    async (id: string) => {
+      const { error: deleteError } = await supabase.from('tasks').delete().eq('id', id)
+      if (deleteError) {
+        setError(deleteError.message)
+      } else {
+        await fetchTasks({ silent: true })
+      }
+    },
+    [fetchTasks],
+  )
 
   const setStatus = useCallback(
     async (task: Task, status: TaskStatus) => {

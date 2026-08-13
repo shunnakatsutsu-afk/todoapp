@@ -7,7 +7,7 @@ import type { ViewTab } from './components/Layout/Header'
 import { TaskList } from './components/Tasks/TaskList'
 import { TaskDetailPanel } from './components/Tasks/TaskDetailPanel'
 import { ArchiveView } from './components/Tasks/ArchiveView'
-import { CalendarView } from './components/Calendar/CalendarView'
+import { WbsView } from './components/Calendar/WbsView'
 import { FilterBar, DEFAULT_FILTERS } from './components/Filters/FilterBar'
 import { applyFilters } from './lib/filter'
 
@@ -40,7 +40,7 @@ function App() {
     <div className="min-h-screen bg-brand-50">
       <Header email={session.user.email} activeTab={tab} onTabChange={setTab} />
 
-      <main className="max-w-2xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-4 py-6">
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
             {error}
@@ -67,8 +67,8 @@ function App() {
               </>
             )}
 
-            {tab === 'calendar' && (
-              <CalendarView
+            {tab === 'wbs' && (
+              <WbsView
                 tasks={tasks}
                 onOpenDetail={setOpenTaskId}
                 onStatusChange={(id, status) => {
