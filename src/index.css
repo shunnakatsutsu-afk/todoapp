@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* 黄緑ベースのブランドカラー */
+@theme {
+  --color-brand-50: #f5faec;
+  --color-brand-100: #e7f4d2;
+  --color-brand-200: #d0e9a9;
+  --color-brand-300: #b2d975;
+  --color-brand-400: #94c948;
+  --color-brand-500: #79b02c;
+  --color-brand-600: #5f8e21;
+  --color-brand-700: #4a701d;
+  --color-brand-800: #3d591c;
+  --color-brand-900: #344b1b;
+
+  --font-sans: system-ui, "Hiragino Sans", "Yu Gothic", sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-brand-50);
+  font-family: var(--font-sans);
+  color: #2f3a1f;
+}
