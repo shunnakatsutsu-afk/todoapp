@@ -3,6 +3,7 @@ import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
 import type { Task, TaskStatus } from '../../lib/types'
 import { TaskItem } from './TaskItem'
 import { QuickAddForm } from './QuickAddForm'
+import type { QuickAddInput } from './QuickAddForm'
 
 export function TaskList({
   tasks,
@@ -12,8 +13,8 @@ export function TaskList({
   onOpenDetail,
 }: {
   tasks: Task[]
-  onAddRoot: (title: string) => void
-  onAddSubtask: (parentId: string, title: string) => void
+  onAddRoot: (input: QuickAddInput) => void
+  onAddSubtask: (parentId: string, input: QuickAddInput) => void
   onStatusChange: (id: string, status: TaskStatus) => void
   onOpenDetail: (id: string) => void
 }) {

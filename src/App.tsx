@@ -56,8 +56,8 @@ function App() {
                 <FilterBar filters={filters} categories={categories} onChange={setFilters} />
                 <TaskList
                   tasks={filteredTasks}
-                  onAddRoot={(title) => addTask({ title })}
-                  onAddSubtask={(parentId, title) => addTask({ title, parent_id: parentId })}
+                  onAddRoot={(input) => addTask(input)}
+                  onAddSubtask={(parentId, input) => addTask({ ...input, parent_id: parentId })}
                   onStatusChange={(id, status) => {
                     const task = tasks.find((t) => t.id === id)
                     if (task) setStatus(task, status)

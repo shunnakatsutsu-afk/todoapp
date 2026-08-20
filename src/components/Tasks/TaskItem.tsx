@@ -5,6 +5,7 @@ import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
 import { StatusBadge } from './StatusBadge'
 import { PriorityBadge } from './PriorityBadge'
 import { QuickAddForm } from './QuickAddForm'
+import type { QuickAddInput } from './QuickAddForm'
 
 function isOverdue(dueDate: string | null, status: TaskStatus) {
   if (!dueDate || status === 'done') return false
@@ -24,7 +25,7 @@ export function TaskItem({
   depth: number
   onStatusChange: (id: string, status: TaskStatus) => void
   onOpenDetail: (id: string) => void
-  onAddSubtask: (parentId: string, title: string) => void
+  onAddSubtask: (parentId: string, input: QuickAddInput) => void
 }) {
   const [expanded, setExpanded] = useState(true)
   const [addingSub, setAddingSub] = useState(false)
@@ -113,8 +114,8 @@ export function TaskItem({
           <QuickAddForm
             placeholder="サブタスク名"
             autoFocus
-            onAdd={(title) => {
-              onAddSubtask(node.id, title)
+            onAdd={(input) => {
+              onAddSubtask(node.id, input)
               setAddingSub(false)
             }}
           />
