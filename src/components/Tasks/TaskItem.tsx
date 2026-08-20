@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { TaskNode, TaskStatus } from '../../lib/types'
 import { progressOf } from '../../lib/tree'
+import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
 import { StatusBadge } from './StatusBadge'
 import { PriorityBadge } from './PriorityBadge'
 import { QuickAddForm } from './QuickAddForm'
@@ -32,56 +33,72 @@ export function TaskItem({
   const overdue = isOverdue(node.due_date, node.status)
 
   return (
-    <div style={{ marginLeft: depth === 0 ? 0 : 20 }}>
+    <div style={{ minWidth: TASK_ROW_MIN_WIDTH }}>
       <div
-        className={`group flex items-center gap-2 rounded-lg px-3 py-2 mb-1 border ${
+        className={`group ${TASK_GRID_COLS} items-center gap-2 rounded-lg px-3 py-2 mb-1 border ${
           overdue ? 'border-red-200 bg-red-50' : 'border-brand-100 bg-white'
         } hover:border-brand-300 transition-colors`}
       >
-        <button
-          onClick={() => setExpanded((v) => !v)}
-          className="w-4 text-brand-400 text-xs shrink-0"
-          aria-label="開閉"
-        >
-          {hasChildren ? (expanded ? '▼' : '▶') : ''}
-        </button>
-
-        <button
-          className="flex-1 text-left cursor-pointer"
-          onClick={() => onOpenDetail(node.id)}
-        >
-          <div className="flex items-center gap-2 flex-wrap">
+        {/* タスク名 */}
+        <div className="flex items-center gap-1.5 min-w-0" style={{ paddingLeft: depth * 18 }}>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="w-4 text-brand-400 text-xs shrink-0"
+            aria-label="開閉"
+          >
+            {hasChildren ? (expanded ? '▼' : '▶') : ''}
+          </button>
+          <button className="min-w-0 text-left cursor-pointer flex-1" onClick={() => onOpenDetail(node.id)}>
             <span
-              className={`text-sm ${
+              className={`text-sm truncate block ${
                 node.status === 'done' ? 'line-through text-brand-400' : 'text-gray-800'
               }`}
+              title={node.title}
             >
               {node.title}
+              {node.memo && <span className="text-brand-400 ml-1">📝</span>}
+              {hasChildren && (
+                <span className="text-xs text-brand-500 ml-1">
+                  ({done}/{total})
+                </span>
+              )}
             </span>
-            {node.category && (
-              <span className="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full">
-                {node.category}
-              </span>
-            )}
-            {node.memo && <span className="text-xs text-brand-400">📝</span>}
-            {hasChildren && (
-              <span className="text-xs text-brand-500">
-                {done}/{total}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-3 mt-0.5">
-            {node.due_date && (
-              <span className={`text-xs ${overdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
-                期限: {node.due_date}
-              </span>
-            )}
-            <PriorityBadge priority={node.priority} />
-          </div>
-        </button>
+          </button>
+        </div>
 
-        <StatusBadge status={node.status} onChange={(s) => onStatusChange(node.id, s)} />
+        {/* カテゴリ */}
+        <div className="min-w-0">
+          {node.category ? (
+            <span className="text-xs bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full truncate inline-block max-w-full">
+              {node.category}
+            </span>
+          ) : (
+            <span className="text-xs text-brand-200">—</span>
+          )}
+        </div>
 
+        {/* 期限 */}
+        <div className="min-w-0">
+          {node.due_date ? (
+            <span className={`text-xs whitespace-nowrap ${overdue ? 'text-red-600 font-semibold' : 'text-gray-500'}`}>
+              {node.due_date}
+            </span>
+          ) : (
+            <span className="text-xs text-brand-200">—</span>
+          )}
+        </div>
+
+        {/* 優先度 */}
+        <div className="min-w-0">
+          <PriorityBadge priority={node.priority} compact />
+        </div>
+
+        {/* ステータス */}
+        <div className="min-w-0">
+          <StatusBadge status={node.status} onChange={(s) => onStatusChange(node.id, s)} />
+        </div>
+
+        {/* サブタスク追加 */}
         <button
           onClick={() => setAddingSub((v) => !v)}
           className="text-brand-400 hover:text-brand-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
@@ -92,7 +109,7 @@ export function TaskItem({
       </div>
 
       {addingSub && (
-        <div className="mb-2" style={{ marginLeft: 24 }}>
+        <div className="mb-2" style={{ marginLeft: 24 + depth * 18 }}>
           <QuickAddForm
             placeholder="サブタスク名"
             autoFocus
