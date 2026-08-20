@@ -17,6 +17,9 @@ export const DEFAULT_FILTERS: Filters = {
   sort: 'created_at',
 }
 
+// リストには完了タスクを出さないため、ステータス絞り込みからは「完了」を除く
+const LIST_STATUS_OPTIONS: TaskStatus[] = ['not_started', 'in_progress']
+
 export function FilterBar({
   filters,
   categories,
@@ -43,7 +46,7 @@ export function FilterBar({
           className="rounded-lg border border-brand-200 px-2 py-1.5 bg-white"
         >
           <option value="all">すべてのステータス</option>
-          {(Object.keys(STATUS_LABEL) as TaskStatus[]).map((s) => (
+          {LIST_STATUS_OPTIONS.map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
             </option>

@@ -22,12 +22,15 @@ function App() {
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const [addTarget, setAddTarget] = useState<{ parentId: string | null } | null>(null)
 
+  // 完了したタスクはリストには出さず、完了履歴タブのみに残す
+  const activeTasks = useMemo(() => tasks.filter((t) => t.status !== 'done'), [tasks])
+
   const categories = useMemo(
-    () => Array.from(new Set(tasks.map((t) => t.category).filter((c): c is string => !!c))),
-    [tasks],
+    () => Array.from(new Set(activeTasks.map((t) => t.category).filter((c): c is string => !!c))),
+    [activeTasks],
   )
 
-  const filteredTasks = useMemo(() => applyFilters(tasks, filters), [tasks, filters])
+  const filteredTasks = useMemo(() => applyFilters(activeTasks, filters), [activeTasks, filters])
   const openTask = tasks.find((t) => t.id === openTaskId) ?? null
 
   if (authLoading) {

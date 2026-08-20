@@ -23,9 +23,9 @@ export function TaskList({
       <div className="mb-4">
         <button
           onClick={onRequestAdd}
-          className="w-full rounded-lg border-2 border-dashed border-brand-300 text-brand-600 text-sm font-medium py-2.5 hover:bg-brand-50 hover:border-brand-400 transition-colors"
+          className="inline-flex items-center gap-1 rounded-full bg-brand-500 text-white text-sm font-medium px-4 py-1.5 hover:bg-brand-600 transition-colors"
         >
-          ＋ 新しいタスクを追加
+          ＋ タスク追加
         </button>
       </div>
 
