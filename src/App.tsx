@@ -61,6 +61,8 @@ function App() {
                 <FilterBar filters={filters} categories={categories} onChange={setFilters} />
                 <TaskList
                   tasks={filteredTasks}
+                  search={filters.search}
+                  onSearchChange={(search) => setFilters({ ...filters, search })}
                   onRequestAdd={() => setAddTarget({ parentId: null })}
                   onRequestAddSubtask={(parentId) => setAddTarget({ parentId })}
                   onStatusChange={(id, status) => {

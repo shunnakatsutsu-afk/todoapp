@@ -5,12 +5,16 @@ import { TaskItem } from './TaskItem'
 
 export function TaskList({
   tasks,
+  search,
+  onSearchChange,
   onRequestAdd,
   onRequestAddSubtask,
   onStatusChange,
   onOpenDetail,
 }: {
   tasks: Task[]
+  search: string
+  onSearchChange: (value: string) => void
   onRequestAdd: () => void
   onRequestAddSubtask: (parentId: string) => void
   onStatusChange: (id: string, status: TaskStatus) => void
@@ -20,13 +24,20 @@ export function TaskList({
 
   return (
     <div>
-      <div className="mb-4">
+      <div className="flex items-center gap-2 mb-4">
         <button
           onClick={onRequestAdd}
-          className="inline-flex items-center gap-1 rounded-full bg-brand-500 text-white text-sm font-medium px-4 py-1.5 hover:bg-brand-600 transition-colors"
+          className="inline-flex items-center gap-1 rounded-full bg-brand-500 text-white text-sm font-medium px-4 py-1.5 hover:bg-brand-600 transition-colors shrink-0"
         >
           ＋ タスク追加
         </button>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="検索…"
+          className="flex-1 min-w-[100px] max-w-xs rounded-full border border-brand-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+        />
       </div>
 
       <div className="overflow-x-auto">
