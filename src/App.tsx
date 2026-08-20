@@ -6,6 +6,7 @@ import { Header } from './components/Layout/Header'
 import type { ViewTab } from './components/Layout/Header'
 import { TaskList } from './components/Tasks/TaskList'
 import { TaskDetailPanel } from './components/Tasks/TaskDetailPanel'
+import { TaskFormModal } from './components/Tasks/TaskFormModal'
 import { ArchiveView } from './components/Tasks/ArchiveView'
 import { WbsView } from './components/Calendar/WbsView'
 import { FilterBar, DEFAULT_FILTERS } from './components/Filters/FilterBar'
@@ -19,6 +20,7 @@ function App() {
   const [tab, setTab] = useState<ViewTab>('list')
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
+  const [addTarget, setAddTarget] = useState<{ parentId: string | null } | null>(null)
 
   const categories = useMemo(
     () => Array.from(new Set(tasks.map((t) => t.category).filter((c): c is string => !!c))),
@@ -56,8 +58,8 @@ function App() {
                 <FilterBar filters={filters} categories={categories} onChange={setFilters} />
                 <TaskList
                   tasks={filteredTasks}
-                  onAddRoot={(input) => addTask(input)}
-                  onAddSubtask={(parentId, input) => addTask({ ...input, parent_id: parentId })}
+                  onRequestAdd={() => setAddTarget({ parentId: null })}
+                  onRequestAddSubtask={(parentId) => setAddTarget({ parentId })}
                   onStatusChange={(id, status) => {
                     const task = tasks.find((t) => t.id === id)
                     if (task) setStatus(task, status)
@@ -98,6 +100,17 @@ function App() {
           onClose={() => setOpenTaskId(null)}
           onUpdate={updateTask}
           onDelete={deleteTask}
+        />
+      )}
+
+      {addTarget && (
+        <TaskFormModal
+          title={addTarget.parentId ? 'サブタスクを追加' : 'タスクを追加'}
+          onClose={() => setAddTarget(null)}
+          onSubmit={async (values) => {
+            await addTask({ ...values, parent_id: addTarget.parentId })
+            setAddTarget(null)
+          }}
         />
       )}
     </div>

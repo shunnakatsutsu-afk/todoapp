@@ -4,8 +4,6 @@ import { progressOf } from '../../lib/tree'
 import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
 import { StatusBadge } from './StatusBadge'
 import { PriorityBadge } from './PriorityBadge'
-import { QuickAddForm } from './QuickAddForm'
-import type { QuickAddInput } from './QuickAddForm'
 
 function isOverdue(dueDate: string | null, status: TaskStatus) {
   if (!dueDate || status === 'done') return false
@@ -19,16 +17,15 @@ export function TaskItem({
   depth,
   onStatusChange,
   onOpenDetail,
-  onAddSubtask,
+  onRequestAddSubtask,
 }: {
   node: TaskNode
   depth: number
   onStatusChange: (id: string, status: TaskStatus) => void
   onOpenDetail: (id: string) => void
-  onAddSubtask: (parentId: string, input: QuickAddInput) => void
+  onRequestAddSubtask: (parentId: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
-  const [addingSub, setAddingSub] = useState(false)
   const hasChildren = node.children.length > 0
   const { done, total } = progressOf(node)
   const overdue = isOverdue(node.due_date, node.status)
@@ -101,26 +98,13 @@ export function TaskItem({
 
         {/* サブタスク追加 */}
         <button
-          onClick={() => setAddingSub((v) => !v)}
+          onClick={() => onRequestAddSubtask(node.id)}
           className="text-brand-400 hover:text-brand-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
           title="サブタスクを追加"
         >
           ＋子
         </button>
       </div>
-
-      {addingSub && (
-        <div className="mb-2" style={{ marginLeft: 24 + depth * 18 }}>
-          <QuickAddForm
-            placeholder="サブタスク名"
-            autoFocus
-            onAdd={(input) => {
-              onAddSubtask(node.id, input)
-              setAddingSub(false)
-            }}
-          />
-        </div>
-      )}
 
       {expanded &&
         node.children.map((child) => (
@@ -130,7 +114,7 @@ export function TaskItem({
             depth={depth + 1}
             onStatusChange={onStatusChange}
             onOpenDetail={onOpenDetail}
-            onAddSubtask={onAddSubtask}
+            onRequestAddSubtask={onRequestAddSubtask}
           />
         ))}
     </div>

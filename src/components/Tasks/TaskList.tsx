@@ -2,19 +2,17 @@ import { buildTree } from '../../lib/tree'
 import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
 import type { Task, TaskStatus } from '../../lib/types'
 import { TaskItem } from './TaskItem'
-import { QuickAddForm } from './QuickAddForm'
-import type { QuickAddInput } from './QuickAddForm'
 
 export function TaskList({
   tasks,
-  onAddRoot,
-  onAddSubtask,
+  onRequestAdd,
+  onRequestAddSubtask,
   onStatusChange,
   onOpenDetail,
 }: {
   tasks: Task[]
-  onAddRoot: (input: QuickAddInput) => void
-  onAddSubtask: (parentId: string, input: QuickAddInput) => void
+  onRequestAdd: () => void
+  onRequestAddSubtask: (parentId: string) => void
   onStatusChange: (id: string, status: TaskStatus) => void
   onOpenDetail: (id: string) => void
 }) {
@@ -23,7 +21,12 @@ export function TaskList({
   return (
     <div>
       <div className="mb-4">
-        <QuickAddForm onAdd={onAddRoot} placeholder="新しいタスクを追加…" />
+        <button
+          onClick={onRequestAdd}
+          className="w-full rounded-lg border-2 border-dashed border-brand-300 text-brand-600 text-sm font-medium py-2.5 hover:bg-brand-50 hover:border-brand-400 transition-colors"
+        >
+          ＋ 新しいタスクを追加
+        </button>
       </div>
 
       <div className="overflow-x-auto">
@@ -49,7 +52,7 @@ export function TaskList({
                 depth={0}
                 onStatusChange={onStatusChange}
                 onOpenDetail={onOpenDetail}
-                onAddSubtask={onAddSubtask}
+                onRequestAddSubtask={onRequestAddSubtask}
               />
             ))
           )}
