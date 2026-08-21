@@ -2,9 +2,18 @@ export type TaskStatus = 'not_started' | 'in_progress' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high'
 export type Recurrence = 'none' | 'daily' | 'weekly' | 'monthly'
 
+export interface Project {
+  id: string
+  user_id: string
+  name: string
+  sort_order: number
+  created_at: string
+}
+
 export interface Task {
   id: string
   user_id: string
+  project_id: string | null
   parent_id: string | null
   title: string
   memo: string | null
@@ -24,6 +33,7 @@ export type NewTask = Pick<Task, 'title'> &
   Partial<
     Pick<
       Task,
+      | 'project_id'
       | 'parent_id'
       | 'memo'
       | 'status'
@@ -47,6 +57,7 @@ export type TaskUpdate = Partial<
     | 'due_date'
     | 'recurrence'
     | 'parent_id'
+    | 'project_id'
     | 'sort_order'
     | 'completed_at'
   >

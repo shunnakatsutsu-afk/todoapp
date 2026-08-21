@@ -3,9 +3,18 @@
 
 create extension if not exists "pgcrypto";
 
+create table if not exists public.projects (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.tasks (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
+  project_id uuid references public.projects(id) on delete cascade,
   parent_id uuid references public.tasks(id) on delete cascade,
   title text not null,
   memo text,
@@ -24,7 +33,9 @@ create table if not exists public.tasks (
   updated_at timestamptz not null default now()
 );
 
+create index if not exists projects_user_id_idx on public.projects (user_id);
 create index if not exists tasks_user_id_idx on public.tasks (user_id);
+create index if not exists tasks_project_id_idx on public.tasks (project_id);
 create index if not exists tasks_parent_id_idx on public.tasks (parent_id);
 create index if not exists tasks_due_date_idx on public.tasks (due_date);
 
@@ -42,8 +53,25 @@ create trigger tasks_set_updated_at
   before update on public.tasks
   for each row execute function public.set_updated_at();
 
--- Row Level Security: 自分のタスクしか読み書きできないようにする
+-- Row Level Security: 自分のデータしか読み書きできないようにする
+alter table public.projects enable row level security;
 alter table public.tasks enable row level security;
+
+drop policy if exists "select own projects" on public.projects;
+create policy "select own projects" on public.projects
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "insert own projects" on public.projects;
+create policy "insert own projects" on public.projects
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "update own projects" on public.projects;
+create policy "update own projects" on public.projects
+  for update using (auth.uid() = user_id);
+
+drop policy if exists "delete own projects" on public.projects;
+create policy "delete own projects" on public.projects
+  for delete using (auth.uid() = user_id);
 
 drop policy if exists "select own tasks" on public.tasks;
 create policy "select own tasks" on public.tasks

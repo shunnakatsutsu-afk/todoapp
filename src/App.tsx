@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from './hooks/useAuth'
 import { useTasks } from './hooks/useTasks'
+import { useProjects } from './hooks/useProjects'
 import { LoginScreen } from './components/Auth/LoginScreen'
 import { Header } from './components/Layout/Header'
 import type { ViewTab } from './components/Layout/Header'
+import { ProjectBar } from './components/Projects/ProjectBar'
+import { ProjectManagerModal } from './components/Projects/ProjectManagerModal'
 import { TaskList } from './components/Tasks/TaskList'
 import { TaskDetailPanel } from './components/Tasks/TaskDetailPanel'
 import { TaskFormModal } from './components/Tasks/TaskFormModal'
@@ -12,18 +15,48 @@ import { WbsView } from './components/Calendar/WbsView'
 import { FilterBar, DEFAULT_FILTERS } from './components/Filters/FilterBar'
 import { applyFilters } from './lib/filter'
 
+const SELECTED_PROJECT_KEY = 'todo-app:selected-project-id'
+
 function App() {
   const { session, loading: authLoading } = useAuth()
   const userId = session?.user.id
   const { tasks, loading, error, addTask, updateTask, deleteTask, setStatus } = useTasks(userId)
+  const {
+    projects,
+    loading: projectsLoading,
+    addProject,
+    renameProject,
+    deleteProject,
+  } = useProjects(userId)
 
   const [tab, setTab] = useState<ViewTab>('list')
   const [filters, setFilters] = useState(DEFAULT_FILTERS)
   const [openTaskId, setOpenTaskId] = useState<string | null>(null)
   const [addTarget, setAddTarget] = useState<{ parentId: string | null } | null>(null)
+  const [managingProjects, setManagingProjects] = useState(false)
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(() =>
+    localStorage.getItem(SELECTED_PROJECT_KEY),
+  )
+
+  // プロジェクト一覧が読み込まれたら、選択中プロジェクトが無効な場合は先頭のものを選ぶ
+  useEffect(() => {
+    if (projects.length === 0) return
+    const stillExists = projects.some((p) => p.id === selectedProjectId)
+    if (!stillExists) setSelectedProjectId(projects[0].id)
+  }, [projects, selectedProjectId])
+
+  useEffect(() => {
+    if (selectedProjectId) localStorage.setItem(SELECTED_PROJECT_KEY, selectedProjectId)
+  }, [selectedProjectId])
+
+  // 選択中プロジェクトのタスクだけに絞り込む
+  const projectTasks = useMemo(
+    () => tasks.filter((t) => t.project_id === selectedProjectId),
+    [tasks, selectedProjectId],
+  )
 
   // 完了したタスクはリストには出さず、完了履歴タブのみに残す
-  const activeTasks = useMemo(() => tasks.filter((t) => t.status !== 'done'), [tasks])
+  const activeTasks = useMemo(() => projectTasks.filter((t) => t.status !== 'done'), [projectTasks])
 
   const categories = useMemo(
     () => Array.from(new Set(activeTasks.map((t) => t.category).filter((c): c is string => !!c))),
@@ -45,6 +78,15 @@ function App() {
     <div className="min-h-screen bg-brand-50">
       <Header email={session.user.email} activeTab={tab} onTabChange={setTab} />
 
+      {!projectsLoading && projects.length > 0 && (
+        <ProjectBar
+          projects={projects}
+          selectedId={selectedProjectId}
+          onSelect={setSelectedProjectId}
+          onManage={() => setManagingProjects(true)}
+        />
+      )}
+
       <main className="max-w-4xl mx-auto px-4 py-6">
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
@@ -52,7 +94,7 @@ function App() {
           </div>
         )}
 
-        {loading ? (
+        {loading || projectsLoading ? (
           <p className="text-sm text-brand-400 text-center py-12">読み込み中…</p>
         ) : (
           <>
@@ -87,7 +129,7 @@ function App() {
 
             {tab === 'archive' && (
               <ArchiveView
-                tasks={tasks}
+                tasks={projectTasks}
                 onStatusChange={(id, status) => {
                   const task = tasks.find((t) => t.id === id)
                   if (task) setStatus(task, status)
@@ -101,21 +143,34 @@ function App() {
       {openTask && (
         <TaskDetailPanel
           task={openTask}
-          allTasks={tasks}
+          allTasks={projectTasks}
           onClose={() => setOpenTaskId(null)}
           onUpdate={updateTask}
           onDelete={deleteTask}
         />
       )}
 
-      {addTarget && (
+      {addTarget && selectedProjectId && (
         <TaskFormModal
           title={addTarget.parentId ? 'サブタスクを追加' : 'タスクを追加'}
           onClose={() => setAddTarget(null)}
           onSubmit={async (values) => {
-            await addTask({ ...values, parent_id: addTarget.parentId })
+            await addTask({ ...values, project_id: selectedProjectId, parent_id: addTarget.parentId })
             setAddTarget(null)
           }}
+        />
+      )}
+
+      {managingProjects && (
+        <ProjectManagerModal
+          projects={projects}
+          onAdd={addProject}
+          onRename={renameProject}
+          onDelete={(id) => {
+            deleteProject(id)
+            if (id === selectedProjectId) setSelectedProjectId(null)
+          }}
+          onClose={() => setManagingProjects(false)}
         />
       )}
     </div>
