@@ -38,7 +38,8 @@ export function TaskItem({
         } hover:border-brand-300 transition-colors`}
       >
         {/* タスク名 */}
-        <div className="flex items-center gap-1.5 min-w-0" style={{ paddingLeft: depth * 18 }}>
+        <div className="flex items-center gap-1.5 min-w-0" style={{ paddingLeft: depth * 26 }}>
+          {depth > 0 && <span className="text-brand-300 shrink-0 select-none">↳</span>}
           <button
             onClick={() => setExpanded((v) => !v)}
             className="w-4 text-brand-400 text-xs shrink-0"
@@ -48,7 +49,7 @@ export function TaskItem({
           </button>
           <button className="min-w-0 text-left cursor-pointer flex-1" onClick={() => onOpenDetail(node.id)}>
             <span
-              className={`text-sm truncate block ${
+              className={`text-sm truncate block ${depth === 0 ? 'font-medium' : 'font-normal'} ${
                 node.status === 'done' ? 'line-through text-brand-400' : 'text-gray-800'
               }`}
               title={node.title}
@@ -99,7 +100,7 @@ export function TaskItem({
         {/* サブタスク追加 */}
         <button
           onClick={() => onRequestAddSubtask(node.id)}
-          className="text-brand-400 hover:text-brand-600 text-xs opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+          className="text-brand-400 hover:text-brand-600 text-xs shrink-0"
           title="サブタスクを追加"
         >
           ＋子

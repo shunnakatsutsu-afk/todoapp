@@ -151,6 +151,7 @@ function App() {
           onClose={() => setOpenTaskId(null)}
           onUpdate={updateTask}
           onDelete={deleteTask}
+          onAddSubtask={(parentId) => setAddTarget({ parentId })}
         />
       )}
 

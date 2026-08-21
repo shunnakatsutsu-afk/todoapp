@@ -9,12 +9,14 @@ export function TaskDetailPanel({
   onClose,
   onUpdate,
   onDelete,
+  onAddSubtask,
 }: {
   task: Task
   allTasks: Task[]
   onClose: () => void
   onUpdate: (id: string, update: TaskUpdate) => void
   onDelete: (id: string) => void
+  onAddSubtask: (parentId: string) => void
 }) {
   const [title, setTitle] = useState(task.title)
   const [memo, setMemo] = useState(task.memo ?? '')
@@ -161,6 +163,13 @@ export function TaskDetailPanel({
               ))}
             </select>
           </div>
+
+          <button
+            onClick={() => onAddSubtask(task.id)}
+            className="w-full rounded-lg border border-dashed border-brand-300 text-brand-600 text-sm font-medium py-2 hover:bg-brand-50 transition-colors"
+          >
+            ＋ サブタスクを追加
+          </button>
 
           <div>
             <label className="block text-xs font-medium text-brand-700 mb-1">メモ</label>
