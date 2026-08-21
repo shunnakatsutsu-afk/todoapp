@@ -4,7 +4,8 @@ import { useTasks } from './hooks/useTasks'
 import { useProjects } from './hooks/useProjects'
 import { LoginScreen } from './components/Auth/LoginScreen'
 import { Header } from './components/Layout/Header'
-import type { ViewTab } from './components/Layout/Header'
+import { ViewTabs } from './components/Layout/ViewTabs'
+import type { ViewTab } from './components/Layout/ViewTabs'
 import { ProjectBar } from './components/Projects/ProjectBar'
 import { ProjectManagerModal } from './components/Projects/ProjectManagerModal'
 import { TaskList } from './components/Tasks/TaskList'
@@ -76,7 +77,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-brand-50">
-      <Header email={session.user.email} activeTab={tab} onTabChange={setTab} />
+      <Header email={session.user.email} />
 
       {!projectsLoading && projects.length > 0 && (
         <ProjectBar
@@ -86,6 +87,8 @@ function App() {
           onManage={() => setManagingProjects(true)}
         />
       )}
+
+      <ViewTabs activeTab={tab} onTabChange={setTab} />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {error && (
