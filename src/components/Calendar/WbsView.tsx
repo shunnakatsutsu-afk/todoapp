@@ -7,8 +7,10 @@ import { addDays, startOfToday, toDateKey } from '../../lib/calendar'
 const DAY_WIDTH = 28
 const ROW_HEIGHT = 32
 const LABEL_WIDTH = 200
-const WINDOW_SIZE = 21 // 表示する日数(3週間)
-const STEP_DAYS = 7 // 前へ/次へで動かす日数
+const MIN_DAYS = 60 // 最低でも表示する日数
+const MAX_DAYS = 365 // 表示日数の上限
+const PADDING_DAYS = 14 // 一番遠いタスクの期限からさらに余白として足す日数
+const STEP_DAYS = 7 // ←→ボタンでスクロールする日数
 
 function markerColor(node: Task, overdue: boolean) {
   if (node.status === 'done') return { pole: '#5f8e21', flag: '#94c948' } // brand
@@ -31,12 +33,21 @@ export function WbsView({
   onOpenDetail: (id: string) => void
   onStatusChange: (id: string, status: TaskStatus) => void
 }) {
-  const [windowStart, setWindowStart] = useState(() => startOfToday())
+  // 起点は常に「今日」で固定し、ページ送りではなく横スクロールで全体を見られるようにする
+  const windowStart = useMemo(() => startOfToday(), [])
 
-  const days = useMemo(
-    () => Array.from({ length: WINDOW_SIZE }, (_, i) => addDays(windowStart, i)),
-    [windowStart],
-  )
+  const days = useMemo(() => {
+    let maxOffset = MIN_DAYS - 1
+    tasks.forEach((t) => {
+      ;[t.start_date, t.due_date].forEach((dateKey) => {
+        if (!dateKey) return
+        const offset = dayIndex(dateKey, windowStart) + PADDING_DAYS
+        if (offset > maxOffset) maxOffset = offset
+      })
+    })
+    maxOffset = Math.min(maxOffset, MAX_DAYS - 1)
+    return Array.from({ length: maxOffset + 1 }, (_, i) => addDays(windowStart, i))
+  }, [tasks, windowStart])
 
   const tree = useMemo(() => buildTree(tasks), [tasks])
   const rows = useMemo(() => flattenTree(tree), [tree])
@@ -63,7 +74,6 @@ export function WbsView({
     }
   }, [days.length, rows.length])
 
-  const hasOverflow = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 1
   const thumbWidthPct = Math.min(100, (scrollMetrics.clientWidth / scrollMetrics.scrollWidth) * 100)
   const maxScroll = scrollMetrics.scrollWidth - scrollMetrics.clientWidth
   const thumbLeftPct = maxScroll > 0 ? (scrollMetrics.scrollLeft / maxScroll) * (100 - thumbWidthPct) : 0
@@ -93,34 +103,37 @@ export function WbsView({
     draggingRef.current = false
   }
 
+  const scrollByDays = (n: number) => {
+    scrollRef.current?.scrollBy({ left: n * DAY_WIDTH, behavior: 'smooth' })
+  }
+
+  const scrollToToday = () => {
+    scrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
+  }
+
   const todayKey = toDateKey(startOfToday())
   const rangeLabel = `${days[0].getMonth() + 1}/${days[0].getDate()} 〜 ${days[days.length - 1].getMonth() + 1}/${days[days.length - 1].getDate()}`
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setWindowStart((d) => addDays(d, -STEP_DAYS))}
-          className="text-brand-600 hover:text-brand-800 px-2"
-        >
+        <button onClick={() => scrollByDays(-STEP_DAYS)} className="text-brand-600 hover:text-brand-800 px-2">
           ←
         </button>
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-semibold text-brand-800">{rangeLabel}</h2>
           <button
-            onClick={() => setWindowStart(startOfToday())}
+            onClick={scrollToToday}
             className="text-xs text-brand-500 border border-brand-200 rounded-full px-2 py-0.5 hover:bg-brand-50"
           >
             今日
           </button>
         </div>
-        <button
-          onClick={() => setWindowStart((d) => addDays(d, STEP_DAYS))}
-          className="text-brand-600 hover:text-brand-800 px-2"
-        >
+        <button onClick={() => scrollByDays(STEP_DAYS)} className="text-brand-600 hover:text-brand-800 px-2">
           →
         </button>
       </div>
+      <p className="text-xs text-brand-400 mb-2 -mt-2">横にスクロールすると先の予定まで確認できます</p>
 
       {rows.length === 0 ? (
         <p className="text-sm text-brand-400 text-center py-12">タスクがありません</p>
@@ -244,7 +257,7 @@ export function WbsView({
         </div>
       )}
 
-      {hasOverflow && (
+      {rows.length > 0 && (
         <div
           ref={trackRef}
           onClick={handleTrackClick}
