@@ -84,6 +84,7 @@ function App() {
           projects={projects}
           selectedId={selectedProjectId}
           onSelect={setSelectedProjectId}
+          onRename={renameProject}
           onManage={() => setManagingProjects(true)}
         />
       )}
