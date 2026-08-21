@@ -72,7 +72,7 @@ export function WbsView({
       {rows.length === 0 ? (
         <p className="text-sm text-brand-400 text-center py-12">タスクがありません</p>
       ) : (
-        <div className="border border-brand-100 rounded-lg overflow-x-auto bg-white">
+        <div className="border border-brand-100 rounded-lg overflow-x-scroll brand-scrollbar bg-white">
           <div style={{ width: LABEL_WIDTH + days.length * DAY_WIDTH }}>
             {/* ヘッダー: 日付 */}
             <div className="flex sticky top-0 bg-brand-50 border-b border-brand-200 z-10">
