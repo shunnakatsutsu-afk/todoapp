@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from 'react'
 import type { Task, TaskStatus } from '../../lib/types'
 import { buildTree, flattenTree } from '../../lib/tree'
 import { addDays, startOfToday, toDateKey } from '../../lib/calendar'
@@ -40,6 +41,58 @@ export function WbsView({
   const tree = useMemo(() => buildTree(tasks), [tasks])
   const rows = useMemo(() => flattenTree(tree), [tree])
 
+  // ネイティブのスクロールバーが環境によって表示されないことがあるため、
+  // 自前のスクロールバー(トラック+つまみ)を表示する
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const draggingRef = useRef(false)
+  const [scrollMetrics, setScrollMetrics] = useState({ scrollLeft: 0, scrollWidth: 1, clientWidth: 1 })
+
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const update = () => {
+      setScrollMetrics({ scrollLeft: el.scrollLeft, scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })
+    }
+    update()
+    el.addEventListener('scroll', update)
+    window.addEventListener('resize', update)
+    return () => {
+      el.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [days.length, rows.length])
+
+  const hasOverflow = scrollMetrics.scrollWidth > scrollMetrics.clientWidth + 1
+  const thumbWidthPct = Math.min(100, (scrollMetrics.clientWidth / scrollMetrics.scrollWidth) * 100)
+  const maxScroll = scrollMetrics.scrollWidth - scrollMetrics.clientWidth
+  const thumbLeftPct = maxScroll > 0 ? (scrollMetrics.scrollLeft / maxScroll) * (100 - thumbWidthPct) : 0
+
+  const scrollToFraction = (clientX: number) => {
+    const el = scrollRef.current
+    const track = trackRef.current
+    if (!el || !track) return
+    const rect = track.getBoundingClientRect()
+    const fraction = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
+    el.scrollLeft = fraction * (el.scrollWidth - el.clientWidth)
+  }
+
+  const handleTrackClick = (e: ReactMouseEvent<HTMLDivElement>) => scrollToFraction(e.clientX)
+
+  const handleThumbPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    draggingRef.current = true
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handleThumbPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!draggingRef.current) return
+    scrollToFraction(e.clientX)
+  }
+
+  const handleThumbPointerUp = () => {
+    draggingRef.current = false
+  }
+
   const todayKey = toDateKey(startOfToday())
   const rangeLabel = `${days[0].getMonth() + 1}/${days[0].getDate()} 〜 ${days[days.length - 1].getMonth() + 1}/${days[days.length - 1].getDate()}`
 
@@ -72,7 +125,7 @@ export function WbsView({
       {rows.length === 0 ? (
         <p className="text-sm text-brand-400 text-center py-12">タスクがありません</p>
       ) : (
-        <div className="border border-brand-100 rounded-lg overflow-x-scroll brand-scrollbar bg-white">
+        <div ref={scrollRef} className="border border-brand-100 rounded-lg overflow-x-auto brand-scrollbar bg-white">
           <div style={{ width: LABEL_WIDTH + days.length * DAY_WIDTH }}>
             {/* ヘッダー: 日付 */}
             <div className="flex sticky top-0 bg-brand-50 border-b border-brand-200 z-10">
@@ -188,6 +241,22 @@ export function WbsView({
               )
             })}
           </div>
+        </div>
+      )}
+
+      {hasOverflow && (
+        <div
+          ref={trackRef}
+          onClick={handleTrackClick}
+          className="relative h-2.5 mt-2 rounded-full bg-brand-100 cursor-pointer"
+        >
+          <div
+            onPointerDown={handleThumbPointerDown}
+            onPointerMove={handleThumbPointerMove}
+            onPointerUp={handleThumbPointerUp}
+            className="absolute top-0 h-2.5 rounded-full bg-brand-400 hover:bg-brand-500 transition-colors cursor-grab active:cursor-grabbing"
+            style={{ left: `${thumbLeftPct}%`, width: `${thumbWidthPct}%` }}
+          />
         </div>
       )}
 
