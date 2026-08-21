@@ -21,7 +21,7 @@ const SELECTED_PROJECT_KEY = 'todo-app:selected-project-id'
 function App() {
   const { session, loading: authLoading } = useAuth()
   const userId = session?.user.id
-  const { tasks, loading, error, addTask, updateTask, deleteTask, setStatus } = useTasks(userId)
+  const { tasks, loading, error, addTask, updateTask, deleteTask, setStatus, reorderTasks } = useTasks(userId)
   const {
     projects,
     loading: projectsLoading,
@@ -67,6 +67,24 @@ function App() {
   const filteredTasks = useMemo(() => applyFilters(activeTasks, filters), [activeTasks, filters])
   const openTask = tasks.find((t) => t.id === openTaskId) ?? null
 
+  // 同じ親を持つタスク同士だけ、ドラッグした位置に並び替える
+  const handleReorder = (draggedId: string, targetId: string) => {
+    const dragged = tasks.find((t) => t.id === draggedId)
+    const target = tasks.find((t) => t.id === targetId)
+    if (!dragged || !target) return
+    if (dragged.parent_id !== target.parent_id || dragged.project_id !== target.project_id) return
+
+    const siblings = tasks
+      .filter((t) => t.parent_id === dragged.parent_id && t.project_id === dragged.project_id)
+      .sort((a, b) => a.sort_order - b.sort_order || a.created_at.localeCompare(b.created_at))
+
+    const withoutDragged = siblings.filter((t) => t.id !== draggedId)
+    const targetIndex = withoutDragged.findIndex((t) => t.id === targetId)
+    withoutDragged.splice(targetIndex, 0, dragged)
+
+    reorderTasks(withoutDragged.map((t, i) => ({ id: t.id, sort_order: i * 10 })))
+  }
+
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center text-brand-500">読み込み中…</div>
   }
@@ -110,12 +128,12 @@ function App() {
                   search={filters.search}
                   onSearchChange={(search) => setFilters({ ...filters, search })}
                   onRequestAdd={() => setAddTarget({ parentId: null })}
-                  onRequestAddSubtask={(parentId) => setAddTarget({ parentId })}
                   onStatusChange={(id, status) => {
                     const task = tasks.find((t) => t.id === id)
                     if (task) setStatus(task, status)
                   }}
                   onOpenDetail={setOpenTaskId}
+                  onReorder={handleReorder}
                 />
               </>
             )}

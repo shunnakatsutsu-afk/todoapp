@@ -107,6 +107,7 @@ export function useTasks(userId: string | undefined) {
           await addTask({
             title: task.title,
             memo: task.memo ?? undefined,
+            project_id: task.project_id,
             parent_id: task.parent_id,
             priority: task.priority,
             category: task.category ?? undefined,
@@ -120,6 +121,22 @@ export function useTasks(userId: string | undefined) {
     [updateTask, addTask],
   )
 
+  const reorderTasks = useCallback(
+    async (updates: { id: string; sort_order: number }[]) => {
+      if (updates.length === 0) return
+      const results = await Promise.all(
+        updates.map((u) => supabase.from('tasks').update({ sort_order: u.sort_order }).eq('id', u.id)),
+      )
+      const failed = results.find((r) => r.error)
+      if (failed?.error) {
+        setError(failed.error.message)
+      } else {
+        await fetchTasks({ silent: true })
+      }
+    },
+    [fetchTasks],
+  )
+
   return {
     tasks,
     loading,
@@ -128,6 +145,7 @@ export function useTasks(userId: string | undefined) {
     updateTask,
     deleteTask,
     setStatus,
+    reorderTasks,
     refresh: fetchTasks,
   }
 }

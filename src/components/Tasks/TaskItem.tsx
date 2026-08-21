@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { DragEvent } from 'react'
 import type { TaskNode, TaskStatus } from '../../lib/types'
 import { progressOf } from '../../lib/tree'
 import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
@@ -17,29 +18,49 @@ export function TaskItem({
   depth,
   onStatusChange,
   onOpenDetail,
-  onRequestAddSubtask,
+  onReorder,
 }: {
   node: TaskNode
   depth: number
   onStatusChange: (id: string, status: TaskStatus) => void
   onOpenDetail: (id: string) => void
-  onRequestAddSubtask: (parentId: string) => void
+  onReorder: (draggedId: string, targetId: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
+  const [dragOver, setDragOver] = useState(false)
   const hasChildren = node.children.length > 0
   const { done, total } = progressOf(node)
   const overdue = isOverdue(node.due_date, node.status)
 
+  const handleDragStart = (e: DragEvent<HTMLSpanElement>) => {
+    e.dataTransfer.setData('text/plain', node.id)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setDragOver(true)
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setDragOver(false)
+    const draggedId = e.dataTransfer.getData('text/plain')
+    if (draggedId && draggedId !== node.id) onReorder(draggedId, node.id)
+  }
+
   return (
     <div style={{ minWidth: TASK_ROW_MIN_WIDTH }}>
       <div
+        onDragOver={handleDragOver}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
         className={`group ${TASK_GRID_COLS} items-center gap-2 rounded-lg px-3 py-2 mb-1 border ${
-          overdue ? 'border-red-200 bg-red-50' : 'border-brand-100 bg-white'
+          dragOver ? 'border-brand-400 ring-2 ring-brand-300' : overdue ? 'border-red-200 bg-red-50' : 'border-brand-100 bg-white'
         } hover:border-brand-300 transition-colors`}
       >
         {/* タスク名 */}
         <div className="flex items-center gap-1.5 min-w-0" style={{ paddingLeft: depth * 26 }}>
-          {depth > 0 && <span className="text-brand-300 shrink-0 select-none">↳</span>}
           <button
             onClick={() => setExpanded((v) => !v)}
             className="w-4 text-brand-400 text-xs shrink-0"
@@ -97,14 +118,15 @@ export function TaskItem({
           <StatusBadge status={node.status} onChange={(s) => onStatusChange(node.id, s)} />
         </div>
 
-        {/* サブタスク追加 */}
-        <button
-          onClick={() => onRequestAddSubtask(node.id)}
-          className="text-brand-400 hover:text-brand-600 text-xs shrink-0"
-          title="サブタスクを追加"
+        {/* ドラッグハンドル */}
+        <span
+          draggable
+          onDragStart={handleDragStart}
+          className="text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing shrink-0 select-none text-center"
+          title="ドラッグして並び替え"
         >
-          ＋子
-        </button>
+          ⠿
+        </span>
       </div>
 
       {expanded &&
@@ -115,7 +137,7 @@ export function TaskItem({
             depth={depth + 1}
             onStatusChange={onStatusChange}
             onOpenDetail={onOpenDetail}
-            onRequestAddSubtask={onRequestAddSubtask}
+            onReorder={onReorder}
           />
         ))}
     </div>

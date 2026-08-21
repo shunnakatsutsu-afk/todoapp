@@ -8,17 +8,17 @@ export function TaskList({
   search,
   onSearchChange,
   onRequestAdd,
-  onRequestAddSubtask,
   onStatusChange,
   onOpenDetail,
+  onReorder,
 }: {
   tasks: Task[]
   search: string
   onSearchChange: (value: string) => void
   onRequestAdd: () => void
-  onRequestAddSubtask: (parentId: string) => void
   onStatusChange: (id: string, status: TaskStatus) => void
   onOpenDetail: (id: string) => void
+  onReorder: (draggedId: string, targetId: string) => void
 }) {
   const tree = buildTree(tasks)
 
@@ -63,7 +63,7 @@ export function TaskList({
                 depth={0}
                 onStatusChange={onStatusChange}
                 onOpenDetail={onOpenDetail}
-                onRequestAddSubtask={onRequestAddSubtask}
+                onReorder={onReorder}
               />
             ))
           )}
