@@ -76,7 +76,7 @@ function App() {
 
             {tab === 'calendar' && (
               <WbsView
-                tasks={tasks}
+                tasks={activeTasks}
                 onOpenDetail={setOpenTaskId}
                 onStatusChange={(id, status) => {
                   const task = tasks.find((t) => t.id === id)
