@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import { buildTree } from '../../lib/tree'
 import { TASK_GRID_COLS, TASK_ROW_MIN_WIDTH } from '../../lib/layout'
 import type { Task, TaskStatus } from '../../lib/types'
@@ -21,6 +23,46 @@ export function TaskList({
   onReorder: (draggedId: string, targetId: string) => void
 }) {
   const tree = buildTree(tasks)
+
+  // マウス/タッチどちらでも動く自前のドラッグ&ドロップ(ポインタイベント方式)
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [overId, setOverId] = useState<string | null>(null)
+  const dragIdRef = useRef<string | null>(null)
+  const overIdRef = useRef<string | null>(null)
+  dragIdRef.current = dragId
+  overIdRef.current = overId
+
+  const handleGripPointerDown = (id: string, e: ReactPointerEvent) => {
+    e.preventDefault()
+    setDragId(id)
+    setOverId(null)
+  }
+
+  useEffect(() => {
+    if (!dragId) return
+
+    const handleMove = (e: PointerEvent) => {
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      const rowEl = el?.closest<HTMLElement>('[data-task-row-id]')
+      const id = rowEl?.getAttribute('data-task-row-id') ?? null
+      setOverId(id && id !== dragIdRef.current ? id : null)
+    }
+
+    const handleUp = () => {
+      if (dragIdRef.current && overIdRef.current) {
+        onReorder(dragIdRef.current, overIdRef.current)
+      }
+      setDragId(null)
+      setOverId(null)
+    }
+
+    window.addEventListener('pointermove', handleMove)
+    window.addEventListener('pointerup', handleUp)
+    return () => {
+      window.removeEventListener('pointermove', handleMove)
+      window.removeEventListener('pointerup', handleUp)
+    }
+  }, [dragId, onReorder])
 
   return (
     <div>
@@ -63,7 +105,9 @@ export function TaskList({
                 depth={0}
                 onStatusChange={onStatusChange}
                 onOpenDetail={onOpenDetail}
-                onReorder={onReorder}
+                draggingId={dragId}
+                overId={overId}
+                onGripPointerDown={handleGripPointerDown}
               />
             ))
           )}
