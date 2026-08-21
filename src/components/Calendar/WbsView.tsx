@@ -6,11 +6,12 @@ import { addDays, startOfToday, toDateKey } from '../../lib/calendar'
 
 const DAY_WIDTH = 28
 const ROW_HEIGHT = 32
-const LABEL_WIDTH = 200
-const MIN_DAYS = 60 // 最低でも表示する日数
-const MAX_DAYS = 365 // 表示日数の上限
-const PADDING_DAYS = 14 // 一番遠いタスクの期限からさらに余白として足す日数
+const LABEL_WIDTH = 180
+const DAYS_BEFORE = 30 // 今日より前に表示する日数
+const DAYS_AFTER = 30 // 今日より後に表示する日数
 const STEP_DAYS = 7 // ←→ボタンでスクロールする日数
+const MONTH_ROW_HEIGHT = 20
+const DAY_ROW_HEIGHT = 24
 
 function markerColor(node: Task, overdue: boolean) {
   if (node.status === 'done') return { pole: '#5f8e21', flag: '#94c948' } // brand
@@ -19,10 +20,25 @@ function markerColor(node: Task, overdue: boolean) {
   return { pole: '#9ca3af', flag: '#d1d5db' } // gray
 }
 
-function dayIndex(dateKey: string, windowStart: Date): number {
+function dayIndex(dateKey: string, rangeStart: Date): number {
   const [y, m, d] = dateKey.split('-').map(Number)
   const date = new Date(y, m - 1, d)
-  return Math.round((date.getTime() - windowStart.getTime()) / 86_400_000)
+  return Math.round((date.getTime() - rangeStart.getTime()) / 86_400_000)
+}
+
+/** 連続した日付を月ごとにまとめて、月ラベルの表示区間を作る */
+function buildMonthGroups(days: Date[]): { label: string; count: number }[] {
+  const groups: { label: string; count: number }[] = []
+  days.forEach((d) => {
+    const label = `${d.getFullYear()}年${d.getMonth() + 1}月`
+    const last = groups[groups.length - 1]
+    if (last && last.label === label) {
+      last.count += 1
+    } else {
+      groups.push({ label, count: 1 })
+    }
+  })
+  return groups
 }
 
 export function WbsView({
@@ -33,30 +49,24 @@ export function WbsView({
   onOpenDetail: (id: string) => void
   onStatusChange: (id: string, status: TaskStatus) => void
 }) {
-  // 起点は常に「今日」で固定し、ページ送りではなく横スクロールで全体を見られるようにする
-  const windowStart = useMemo(() => startOfToday(), [])
+  // 今日を中心に、前後30日ずつの固定範囲を表示する
+  const rangeStart = useMemo(() => addDays(startOfToday(), -DAYS_BEFORE), [])
+  const todayOffsetPx = DAYS_BEFORE * DAY_WIDTH
 
-  const days = useMemo(() => {
-    let maxOffset = MIN_DAYS - 1
-    tasks.forEach((t) => {
-      ;[t.start_date, t.due_date].forEach((dateKey) => {
-        if (!dateKey) return
-        const offset = dayIndex(dateKey, windowStart) + PADDING_DAYS
-        if (offset > maxOffset) maxOffset = offset
-      })
-    })
-    maxOffset = Math.min(maxOffset, MAX_DAYS - 1)
-    return Array.from({ length: maxOffset + 1 }, (_, i) => addDays(windowStart, i))
-  }, [tasks, windowStart])
+  const days = useMemo(
+    () => Array.from({ length: DAYS_BEFORE + DAYS_AFTER + 1 }, (_, i) => addDays(rangeStart, i)),
+    [rangeStart],
+  )
+  const monthGroups = useMemo(() => buildMonthGroups(days), [days])
 
   const tree = useMemo(() => buildTree(tasks), [tasks])
   const rows = useMemo(() => flattenTree(tree), [tree])
 
-  // ネイティブのスクロールバーが環境によって表示されないことがあるため、
-  // 自前のスクロールバー(トラック+つまみ)を表示する
+  // ネイティブのスクロールバーは非表示にし、自前のスクロールバー(トラック+つまみ)だけを表示する
   const scrollRef = useRef<HTMLDivElement>(null)
   const trackRef = useRef<HTMLDivElement>(null)
   const draggingRef = useRef(false)
+  const centeredRef = useRef(false)
   const [scrollMetrics, setScrollMetrics] = useState({ scrollLeft: 0, scrollWidth: 1, clientWidth: 1 })
 
   useEffect(() => {
@@ -73,6 +83,14 @@ export function WbsView({
       window.removeEventListener('resize', update)
     }
   }, [days.length, rows.length])
+
+  // 初回表示時だけ、今日が見える位置までスクロールしておく
+  useEffect(() => {
+    if (centeredRef.current) return
+    if (!scrollRef.current || rows.length === 0) return
+    scrollRef.current.scrollLeft = todayOffsetPx
+    centeredRef.current = true
+  }, [rows.length, todayOffsetPx])
 
   const thumbWidthPct = Math.min(100, (scrollMetrics.clientWidth / scrollMetrics.scrollWidth) * 100)
   const maxScroll = scrollMetrics.scrollWidth - scrollMetrics.clientWidth
@@ -108,7 +126,7 @@ export function WbsView({
   }
 
   const scrollToToday = () => {
-    scrollRef.current?.scrollTo({ left: 0, behavior: 'smooth' })
+    scrollRef.current?.scrollTo({ left: todayOffsetPx, behavior: 'smooth' })
   }
 
   const todayKey = toDateKey(startOfToday())
@@ -133,17 +151,36 @@ export function WbsView({
           →
         </button>
       </div>
-      <p className="text-xs text-brand-400 mb-2 -mt-2">横にスクロールすると先の予定まで確認できます</p>
 
       {rows.length === 0 ? (
         <p className="text-sm text-brand-400 text-center py-12">タスクがありません</p>
       ) : (
-        <div ref={scrollRef} className="border border-brand-100 rounded-lg overflow-x-auto brand-scrollbar bg-white">
+        <div
+          ref={scrollRef}
+          className="border border-brand-100 rounded-lg overflow-x-auto scroll-hide-native bg-white"
+        >
           <div style={{ width: LABEL_WIDTH + days.length * DAY_WIDTH }}>
-            {/* ヘッダー: 日付 */}
-            <div className="flex sticky top-0 bg-brand-50 border-b border-brand-200 z-10">
+            {/* ヘッダー1行目: 月 */}
+            <div className="flex sticky top-0 bg-brand-50 border-b border-brand-100 z-20" style={{ height: MONTH_ROW_HEIGHT }}>
+              <div className="shrink-0 sticky left-0 z-30 bg-brand-50" style={{ width: LABEL_WIDTH }} />
+              {monthGroups.map((g, i) => (
+                <div
+                  key={i}
+                  className="shrink-0 text-center text-[10px] font-semibold text-brand-600 border-l border-brand-200"
+                  style={{ width: g.count * DAY_WIDTH, lineHeight: `${MONTH_ROW_HEIGHT}px` }}
+                >
+                  {g.label}
+                </div>
+              ))}
+            </div>
+
+            {/* ヘッダー2行目: 日 */}
+            <div
+              className="flex sticky bg-brand-50 border-b border-brand-200 z-20"
+              style={{ top: MONTH_ROW_HEIGHT, height: DAY_ROW_HEIGHT }}
+            >
               <div
-                className="shrink-0 px-2 py-1.5 text-xs font-semibold text-brand-700 border-r border-brand-200"
+                className="shrink-0 sticky left-0 z-30 bg-brand-50 px-2 text-xs font-semibold text-brand-700 border-r border-brand-200 flex items-center"
                 style={{ width: LABEL_WIDTH }}
               >
                 タスク
@@ -154,10 +191,10 @@ export function WbsView({
                 return (
                   <div
                     key={key}
-                    className={`shrink-0 text-center text-[10px] py-1.5 border-l border-brand-100 ${
+                    className={`shrink-0 text-center text-[10px] border-l border-brand-100 flex items-center justify-center ${
                       isToday ? 'bg-brand-200 font-bold text-brand-800' : 'text-brand-400'
                     }`}
-                    style={{ width: DAY_WIDTH }}
+                    style={{ width: DAY_WIDTH, height: DAY_ROW_HEIGHT }}
                   >
                     {d.getDate()}
                   </div>
@@ -167,12 +204,11 @@ export function WbsView({
 
             {/* 行: タスク */}
             {rows.map(({ node, depth }) => {
-              const overdue =
-                !!node.due_date && node.status !== 'done' && node.due_date < todayKey
+              const overdue = !!node.due_date && node.status !== 'done' && node.due_date < todayKey
               const colors = markerColor(node, overdue)
 
-              const startIdx = node.start_date ? dayIndex(node.start_date, windowStart) : null
-              const dueIdx = node.due_date ? dayIndex(node.due_date, windowStart) : null
+              const startIdx = node.start_date ? dayIndex(node.start_date, rangeStart) : null
+              const dueIdx = node.due_date ? dayIndex(node.due_date, rangeStart) : null
 
               let bar: { left: number; width: number } | null = null
               let flagIdx: number | null = null
@@ -199,8 +235,8 @@ export function WbsView({
                 >
                   <button
                     onClick={() => onOpenDetail(node.id)}
-                    className="shrink-0 text-left text-xs truncate px-2 border-r border-brand-100"
-                    style={{ width: LABEL_WIDTH, paddingLeft: 8 + depth * 14 }}
+                    className="shrink-0 sticky left-0 z-10 bg-white text-left text-xs truncate px-2 border-r border-brand-100"
+                    style={{ width: LABEL_WIDTH, paddingLeft: 8 + depth * 14, height: ROW_HEIGHT }}
                     title={node.title}
                   >
                     <span className={node.status === 'done' ? 'line-through text-brand-400' : 'text-gray-700'}>
