@@ -11,6 +11,19 @@ export function getMonthGrid(year: number, month: number): Date[] {
   return days
 }
 
+/** 今日(時刻を00:00に正規化)を返す */
+export function startOfToday(): Date {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+export function addDays(d: Date, days: number): Date {
+  const next = new Date(d)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
 export function toDateKey(d: Date): string {
   const yyyy = d.getFullYear()
   const mm = String(d.getMonth() + 1).padStart(2, '0')

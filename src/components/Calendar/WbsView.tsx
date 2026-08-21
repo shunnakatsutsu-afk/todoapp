@@ -1,17 +1,25 @@
 import { useMemo, useState } from 'react'
 import type { Task, TaskStatus } from '../../lib/types'
 import { buildTree, flattenTree } from '../../lib/tree'
-import { toDateKey } from '../../lib/calendar'
+import { addDays, startOfToday, toDateKey } from '../../lib/calendar'
 
 const DAY_WIDTH = 28
 const ROW_HEIGHT = 32
 const LABEL_WIDTH = 200
+const WINDOW_SIZE = 21 // 表示する日数(3週間)
+const STEP_DAYS = 7 // 前へ/次へで動かす日数
 
 function markerColor(node: Task, overdue: boolean) {
   if (node.status === 'done') return { pole: '#5f8e21', flag: '#94c948' } // brand
   if (overdue) return { pole: '#dc2626', flag: '#f87171' } // red
   if (node.status === 'in_progress') return { pole: '#b45309', flag: '#fbbf24' } // amber
   return { pole: '#9ca3af', flag: '#d1d5db' } // gray
+}
+
+function dayIndex(dateKey: string, windowStart: Date): number {
+  const [y, m, d] = dateKey.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return Math.round((date.getTime() - windowStart.getTime()) / 86_400_000)
 }
 
 export function WbsView({
@@ -22,34 +30,39 @@ export function WbsView({
   onOpenDetail: (id: string) => void
   onStatusChange: (id: string, status: TaskStatus) => void
 }) {
-  const [cursor, setCursor] = useState(() => new Date())
-  const year = cursor.getFullYear()
-  const month = cursor.getMonth()
+  const [windowStart, setWindowStart] = useState(() => startOfToday())
 
-  const days = useMemo(() => {
-    const daysInMonth = new Date(year, month + 1, 0).getDate()
-    return Array.from({ length: daysInMonth }, (_, i) => new Date(year, month, i + 1))
-  }, [year, month])
+  const days = useMemo(
+    () => Array.from({ length: WINDOW_SIZE }, (_, i) => addDays(windowStart, i)),
+    [windowStart],
+  )
 
   const tree = useMemo(() => buildTree(tasks), [tasks])
   const rows = useMemo(() => flattenTree(tree), [tree])
 
-  const todayKey = toDateKey(new Date())
+  const todayKey = toDateKey(startOfToday())
+  const rangeLabel = `${days[0].getMonth() + 1}/${days[0].getDate()} 〜 ${days[days.length - 1].getMonth() + 1}/${days[days.length - 1].getDate()}`
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <button
-          onClick={() => setCursor(new Date(year, month - 1, 1))}
+          onClick={() => setWindowStart((d) => addDays(d, -STEP_DAYS))}
           className="text-brand-600 hover:text-brand-800 px-2"
         >
           ←
         </button>
-        <h2 className="text-sm font-semibold text-brand-800">
-          {year}年 {month + 1}月 のWBS
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-brand-800">{rangeLabel}</h2>
+          <button
+            onClick={() => setWindowStart(startOfToday())}
+            className="text-xs text-brand-500 border border-brand-200 rounded-full px-2 py-0.5 hover:bg-brand-50"
+          >
+            今日
+          </button>
+        </div>
         <button
-          onClick={() => setCursor(new Date(year, month + 1, 1))}
+          onClick={() => setWindowStart((d) => addDays(d, STEP_DAYS))}
           className="text-brand-600 hover:text-brand-800 px-2"
         >
           →
@@ -89,8 +102,28 @@ export function WbsView({
             {/* 行: タスク */}
             {rows.map(({ node, depth }) => {
               const overdue =
-                !!node.due_date && node.status !== 'done' && new Date(node.due_date) < new Date(todayKey)
+                !!node.due_date && node.status !== 'done' && node.due_date < todayKey
               const colors = markerColor(node, overdue)
+
+              const startIdx = node.start_date ? dayIndex(node.start_date, windowStart) : null
+              const dueIdx = node.due_date ? dayIndex(node.due_date, windowStart) : null
+
+              let bar: { left: number; width: number } | null = null
+              let flagIdx: number | null = null
+
+              if (startIdx !== null && dueIdx !== null) {
+                const from = Math.min(startIdx, dueIdx)
+                const to = Math.max(startIdx, dueIdx)
+                if (to >= 0 && from < days.length) {
+                  const clampedFrom = Math.max(0, from)
+                  const clampedTo = Math.min(days.length - 1, to)
+                  bar = { left: clampedFrom * DAY_WIDTH, width: (clampedTo - clampedFrom + 1) * DAY_WIDTH }
+                }
+              } else if (dueIdx !== null) {
+                if (dueIdx >= 0 && dueIdx < days.length) flagIdx = dueIdx
+              } else if (startIdx !== null) {
+                if (startIdx >= 0 && startIdx < days.length) flagIdx = startIdx
+              }
 
               return (
                 <div
@@ -109,35 +142,47 @@ export function WbsView({
                     </span>
                   </button>
 
-                  <div className="flex relative">
+                  <div className="relative flex" style={{ width: days.length * DAY_WIDTH, height: ROW_HEIGHT }}>
                     {days.map((d) => {
                       const key = toDateKey(d)
-                      const isDue = node.due_date === key
                       const isToday = key === todayKey
                       return (
                         <div
                           key={key}
-                          className={`shrink-0 border-l border-brand-50 flex items-center justify-center ${
-                            isToday ? 'bg-brand-100/60' : ''
-                          }`}
+                          className={`shrink-0 border-l border-brand-50 ${isToday ? 'bg-brand-100/60' : ''}`}
                           style={{ width: DAY_WIDTH, height: ROW_HEIGHT }}
-                        >
-                          {isDue && (
-                            <button
-                              onClick={() => onOpenDetail(node.id)}
-                              title={`期限: ${node.due_date}`}
-                              className="cursor-pointer"
-                            >
-                              {/* 矢羽根(フラグ)マーカー */}
-                              <svg width="14" height="22" viewBox="0 0 14 22">
-                                <line x1="2" y1="2" x2="2" y2="20" stroke={colors.pole} strokeWidth="2" />
-                                <path d="M2,2 L13,6 L2,10 Z" fill={colors.flag} stroke={colors.pole} strokeWidth="1" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
+                        />
                       )
                     })}
+
+                    {bar && (
+                      <button
+                        onClick={() => onOpenDetail(node.id)}
+                        title={`${node.start_date} 〜 ${node.due_date}`}
+                        className="absolute top-1/2 -translate-y-1/2 rounded-full cursor-pointer"
+                        style={{
+                          left: bar.left + 2,
+                          width: Math.max(bar.width - 4, 6),
+                          height: 10,
+                          backgroundColor: colors.flag,
+                          border: `1.5px solid ${colors.pole}`,
+                        }}
+                      />
+                    )}
+
+                    {flagIdx !== null && (
+                      <button
+                        onClick={() => onOpenDetail(node.id)}
+                        title={node.due_date ? `期限: ${node.due_date}` : `開始: ${node.start_date}`}
+                        className="absolute top-1/2 -translate-y-1/2 cursor-pointer"
+                        style={{ left: flagIdx * DAY_WIDTH + DAY_WIDTH / 2 - 7 }}
+                      >
+                        <svg width="14" height="22" viewBox="0 0 14 22">
+                          <line x1="2" y1="2" x2="2" y2="20" stroke={colors.pole} strokeWidth="2" />
+                          <path d="M2,2 L13,6 L2,10 Z" fill={colors.flag} stroke={colors.pole} strokeWidth="1" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
               )
@@ -146,34 +191,17 @@ export function WbsView({
         </div>
       )}
 
-      <div className="flex items-center gap-4 mt-3 text-xs text-brand-500">
+      <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-brand-500">
         <span className="flex items-center gap-1">
-          <svg width="10" height="14" viewBox="0 0 14 22">
-            <line x1="2" y1="2" x2="2" y2="20" stroke="#9ca3af" strokeWidth="2" />
-            <path d="M2,2 L13,6 L2,10 Z" fill="#d1d5db" stroke="#9ca3af" strokeWidth="1" />
-          </svg>
-          未着手
-        </span>
-        <span className="flex items-center gap-1">
-          <svg width="10" height="14" viewBox="0 0 14 22">
-            <line x1="2" y1="2" x2="2" y2="20" stroke="#b45309" strokeWidth="2" />
-            <path d="M2,2 L13,6 L2,10 Z" fill="#fbbf24" stroke="#b45309" strokeWidth="1" />
-          </svg>
-          着手中
-        </span>
-        <span className="flex items-center gap-1">
-          <svg width="10" height="14" viewBox="0 0 14 22">
-            <line x1="2" y1="2" x2="2" y2="20" stroke="#5f8e21" strokeWidth="2" />
-            <path d="M2,2 L13,6 L2,10 Z" fill="#94c948" stroke="#5f8e21" strokeWidth="1" />
-          </svg>
-          完了
+          <span className="inline-block w-4 h-2.5 rounded-full bg-gray-300 border border-gray-400" />
+          未着手/着手中/完了(バー: 開始日〜期限)
         </span>
         <span className="flex items-center gap-1">
           <svg width="10" height="14" viewBox="0 0 14 22">
             <line x1="2" y1="2" x2="2" y2="20" stroke="#dc2626" strokeWidth="2" />
             <path d="M2,2 L13,6 L2,10 Z" fill="#f87171" stroke="#dc2626" strokeWidth="1" />
           </svg>
-          期限超過
+          期限超過(旗)
         </span>
       </div>
     </div>

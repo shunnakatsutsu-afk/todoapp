@@ -11,6 +11,7 @@ export interface Task {
   status: TaskStatus
   priority: TaskPriority
   category: string | null
+  start_date: string | null // YYYY-MM-DD
   due_date: string | null // YYYY-MM-DD
   recurrence: Recurrence
   sort_order: number
@@ -23,7 +24,14 @@ export type NewTask = Pick<Task, 'title'> &
   Partial<
     Pick<
       Task,
-      'parent_id' | 'memo' | 'status' | 'priority' | 'category' | 'due_date' | 'recurrence'
+      | 'parent_id'
+      | 'memo'
+      | 'status'
+      | 'priority'
+      | 'category'
+      | 'start_date'
+      | 'due_date'
+      | 'recurrence'
     >
   >
 
@@ -35,6 +43,7 @@ export type TaskUpdate = Partial<
     | 'status'
     | 'priority'
     | 'category'
+    | 'start_date'
     | 'due_date'
     | 'recurrence'
     | 'parent_id'

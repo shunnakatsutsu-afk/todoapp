@@ -102,6 +102,7 @@ export function useTasks(userId: string | undefined) {
       // 繰り返しタスクを完了したら次回分を自動生成する
       if (status === 'done' && task.recurrence !== 'none' && task.due_date) {
         const next = nextDueDate(task.due_date, task.recurrence)
+        const nextStart = task.start_date ? nextDueDate(task.start_date, task.recurrence) : null
         if (next) {
           await addTask({
             title: task.title,
@@ -109,6 +110,7 @@ export function useTasks(userId: string | undefined) {
             parent_id: task.parent_id,
             priority: task.priority,
             category: task.category ?? undefined,
+            start_date: nextStart,
             due_date: next,
             recurrence: task.recurrence,
           })

@@ -5,6 +5,7 @@ import { PRIORITY_LABEL } from '../../lib/types'
 
 export interface TaskFormValues {
   title: string
+  start_date: string | null
   due_date: string | null
   priority: TaskPriority
   category: string | null
@@ -21,6 +22,7 @@ export function TaskFormModal({
   onClose: () => void
 }) {
   const [taskTitle, setTaskTitle] = useState('')
+  const [startDate, setStartDate] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [priority, setPriority] = useState<TaskPriority>('medium')
   const [category, setCategory] = useState('')
@@ -32,6 +34,7 @@ export function TaskFormModal({
     if (!trimmed) return
     onSubmit({
       title: trimmed,
+      start_date: startDate || null,
       due_date: dueDate || null,
       priority,
       category: category.trim() || null,
@@ -68,7 +71,16 @@ export function TaskFormModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-brand-700 mb-1">期限</label>
+              <label className="block text-xs font-medium text-brand-700 mb-1">開始日</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full rounded-lg border border-brand-200 px-2 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">期限(完了日)</label>
               <input
                 type="date"
                 value={dueDate}
@@ -76,6 +88,9 @@ export function TaskFormModal({
                 className="w-full rounded-lg border border-brand-200 px-2 py-2 text-sm"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-brand-700 mb-1">優先度</label>
               <select
@@ -90,16 +105,15 @@ export function TaskFormModal({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-brand-700 mb-1">カテゴリ</label>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="例: 仕事、プライベート"
-              className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
-            />
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">カテゴリ</label>
+              <input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                placeholder="例: 仕事"
+                className="w-full rounded-lg border border-brand-200 px-2 py-2 text-sm"
+              />
+            </div>
           </div>
 
           <div>

@@ -14,6 +14,7 @@ create table if not exists public.tasks (
   priority text not null default 'medium'
     check (priority in ('low', 'medium', 'high')),
   category text,
+  start_date date,
   due_date date,
   recurrence text not null default 'none'
     check (recurrence in ('none', 'daily', 'weekly', 'monthly')),

@@ -100,7 +100,16 @@ export function TaskDetailPanel({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-brand-700 mb-1">期限</label>
+              <label className="block text-xs font-medium text-brand-700 mb-1">開始日</label>
+              <input
+                type="date"
+                value={task.start_date ?? ''}
+                onChange={(e) => onUpdate(task.id, { start_date: e.target.value || null })}
+                className="w-full rounded-lg border border-brand-200 px-2 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">期限(完了日)</label>
               <input
                 type="date"
                 value={task.due_date ?? ''}
@@ -108,6 +117,9 @@ export function TaskDetailPanel({
                 className="w-full rounded-lg border border-brand-200 px-2 py-2 text-sm"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-brand-700 mb-1">繰り返し</label>
               <select
@@ -122,17 +134,16 @@ export function TaskDetailPanel({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-brand-700 mb-1">カテゴリ</label>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              onBlur={() => onUpdate(task.id, { category: category.trim() || null })}
-              placeholder="例: 仕事、プライベート"
-              className="w-full rounded-lg border border-brand-200 px-3 py-2 text-sm"
-            />
+            <div>
+              <label className="block text-xs font-medium text-brand-700 mb-1">カテゴリ</label>
+              <input
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                onBlur={() => onUpdate(task.id, { category: category.trim() || null })}
+                placeholder="例: 仕事"
+                className="w-full rounded-lg border border-brand-200 px-2 py-2 text-sm"
+              />
+            </div>
           </div>
 
           <div>

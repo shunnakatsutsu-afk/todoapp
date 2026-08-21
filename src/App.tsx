@@ -74,7 +74,7 @@ function App() {
               </>
             )}
 
-            {tab === 'wbs' && (
+            {tab === 'calendar' && (
               <WbsView
                 tasks={tasks}
                 onOpenDetail={setOpenTaskId}
